@@ -6,7 +6,7 @@
 //
 // New BSD License
 //
-// Copyright © 2007-2016, Hoa community. All rights reserved.
+// Copyright © 2007-2012, Ivan Enderlin. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -35,37 +35,46 @@
 //
 // Provide a grammar for arithmetic expressions.
 //
-// @copyright  Copyright © 2007-2016 Hoa community.
+// @author     Stéphane Py <py.stephane1@gmail.com>
+// @author     Sébastien Houze <s@verylastroom.com>
+// @author     Ivan Enderlin <ivan.enderlin@hoa-project.net>
+// @copyright  Copyright © 2007-2012 Stéphane Py, Sébastien Houze, Ivan Enderlin.
 // @license    New BSD License
 //
 
 
-%skip   space     [\x20\x09]+
+%skip   space     \s
 %token  bracket_  \(
 %token _bracket   \)
 %token  comma     ,
 %token  number    (0|[1-9]\d*)(\.\d+)?([eE][\+\-]?\d+)?
 %token  plus      \+
 %token  minus     \-|−
+%token  pow       \*\*
 %token  times     \*|×
 %token  div       /|÷
-%token  constant  [A-Z_]+[A-Z0-9_]*
+%token  percent   %
+%token  constant  [A-Z_]+[A-Z0-9_]+
 %token  id        \w+
 
 expression:
-    primary() ( ::plus:: #addition expression() )?
+    primary()
+    ( ( ::plus:: #addition | ::minus:: #substraction ) expression() )?
 
 primary:
-    secondary() ( ::minus:: #substraction expression() )?
-
-secondary:
-    ternary() ( ::times:: #multiplication expression() )?
-
-ternary:
-    term() ( ::div:: #division expression() )?
+    term()
+    (
+        (
+            ::times::   #multiplication
+          | ::div::     #division
+          | ::pow::     #power
+          | ::percent:: #modulo
+        )
+        expression()
+    )?
 
 term:
-    ( ::bracket_:: expression() ::_bracket:: #group )
+    ( ::bracket_:: expression() ::_bracket:: )
   | number()
   | constant()
   | variable()

@@ -8,7 +8,7 @@
  *
  * New BSD License
  *
- * Copyright © 2007-2017, Hoa community. All rights reserved.
+ * Copyright © 2007-2013, Ivan Enderlin. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -34,313 +34,329 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace Hoa\Math\Visitor;
+namespace {
 
-use Hoa\Math;
-use Hoa\Visitor;
+from('Hoa')
+
+/**
+ * \Hoa\Math\Exception\UnknownFunction
+ */
+-> import('Math.Exception.UnknownFunction')
+
+/**
+ * \Hoa\Math\Exception\UnknownConstant
+ */
+-> import('Math.Exception.UnknownConstant')
+
+/**
+ * \Hoa\Math\Exception\DivisionByZero
+ */
+-> import('Math.Exception.DivisionByZero')
+
+/**
+ * \Hoa\Visitor\Visit
+ */
+-> import('Visitor.Visit');
+
+}
+
+namespace Hoa\Math\Visitor {
 
 /**
  * Class \Hoa\Math\Visitor\Arithmetic.
  *
  * Evaluate arithmetical expressions.
  *
- * @copyright  Copyright © 2007-2017 Hoa community
- *             Ivan Enderlin, Cédric Dugat.
+ * @author     Stéphane Py <py.stephane1@gmail.com>
+ * @author     Sébastien Houze <s@verylastroom.com>
+ * @author     Ivan Enderlin <ivan.enderlin@hoa-project.net>
+ * @copyright  Copyright © 2007-2013 Stéphane Py, Sébastien Houze, Ivan Enderlin.
  * @license    New BSD License
  */
-class Arithmetic implements Visitor\Visit
-{
-    /**
-     * Visitor context containing the list of supported functions, constants and variables
-     *
-     * @var \Hoa\Math\Context
-     */
-    protected $_context = null;
+
+class Arithmetic implements \Hoa\Visitor\Visit {
 
     /**
-     * Initializes context.
+     * List of supported functions: identifier => values as callable
      *
+     * @var \ArrayObject object
      */
-    public function __construct()
-    {
-        $this->initializeContext();
-
-        return;
-    }
+    protected $_functions = null;
 
     /**
-     * Set visitor's context
+     * List of constants supported
      *
-     * @param   \Hoa\Math\Context $context
-     * @return  \Hoa\Math\Context
+     * @var \ArrayObject object
      */
-    public function setContext(Math\Context $context)
-    {
-        $old = $this->_context;
+    protected $_constants = null;
 
-        $this->_context = $context;
 
-        return $old;
-    }
-
-    /**
-     * Get visitor's context
-     *
-     * @return  \Hoa\Math\Context
-     */
-    public function getContext()
-    {
-        return $this->_context;
-    }
 
     /**
      * Visit an element.
      *
+     * @access  public
      * @param   \Hoa\Visitor\Element  $element    Element to visit.
      * @param   mixed                 &$handle    Handle (reference).
      * @param   mixed                 $eldnah     Handle (not reference).
      * @return  float
      */
-    public function visit(
-        Visitor\Element $element,
-        &$handle = null,
-        $eldnah  = null
-    ) {
+    public function visit ( \Hoa\Visitor\Element $element,
+                            &$handle = null, $eldnah = null ) {
+
         $type     = $element->getId();
         $children = $element->getChildren();
 
-        if (null === $handle) {
-            $handle = function ($x) {
-                return $x;
-            };
-        }
+        foreach($children as &$child)
+            $child = $child->accept($this, $handle, $eldnah);
 
-        $acc = &$handle;
+        switch($type) {
 
-        switch ($type) {
             case '#function':
-                $name      = array_shift($children)->accept($this, $_, $eldnah);
-                $function  = $this->getFunction($name);
-                $arguments = [];
-
-                foreach ($children as $child) {
-                    $child->accept($this, $_, $eldnah);
-                    $arguments[] = $_();
-                    unset($_);
-                }
-
-                $acc = function () use ($function, $arguments, $acc) {
-                    return $acc($function->distributeArguments($arguments));
-                };
-
-                break;
+                return $this->getFunction(array_shift($children))
+                            ->distributeArguments($children);
+              break;
 
             case '#negative':
-                $children[0]->accept($this, $a, $eldnah);
-
-                $acc = function () use ($a, $acc) {
-                    return $acc(-$a());
-                };
-
-                break;
+                return -$children[0];
+              break;
 
             case '#addition':
-                $children[0]->accept($this, $a, $eldnah);
-
-                $acc = function ($b) use ($a, $acc) {
-                    return $acc($a() + $b);
-                };
-
-                $children[1]->accept($this, $acc, $eldnah);
-
-                break;
-
-            case '#substraction':
-                $children[0]->accept($this, $a, $eldnah);
-
-                $acc = function ($b) use ($a, $acc) {
-                    return $acc($a()) - $b;
-                };
-
-                $children[1]->accept($this, $acc, $eldnah);
-
-                break;
-
-            case '#multiplication':
-                $children[0]->accept($this, $a, $eldnah);
-
-                $acc = function ($b) use ($a, $acc) {
-                    return $acc($a() * $b);
-                };
-
-                $children[1]->accept($this, $acc, $eldnah);
-
-                break;
-
-            case '#division':
-                $children[0]->accept($this, $a, $eldnah);
                 $parent = $element->getParent();
 
-                if (null  === $parent ||
-                    $type === $parent->getId()) {
-                    $acc = function ($b) use ($a, $acc) {
-                        if (0.0 === $b) {
-                            throw new \RuntimeException(
-                                'Division by zero is not possible.'
-                            );
-                        }
+                if(null !== $parent && '#substraction' === $parent->getId())
+                    return $children[0] - $children[1];
 
-                        return $acc($a()) / $b;
-                    };
-                } else {
-                    if ('#fakegroup' !== $parent->getId()) {
-                        $classname = get_class($element);
-                        $group     = new $classname(
-                            '#fakegroup',
-                            null,
-                            [$element],
-                            $parent
-                        );
-                        $element->setParent($group);
+                return $children[0] + $children[1];
+              break;
 
-                        $this->visit($group, $acc, $eldnah);
+            case '#substraction':
+                $parent = $element->getParent();
 
-                        break;
-                    } else {
-                        $acc = function ($b) use ($a, $acc) {
-                            if (0.0 === $b) {
-                                throw new \RuntimeException(
-                                    'Division by zero is not possible.'
-                                );
-                            }
+                if(   null            !== $parent
+                   && '#substraction' === $parent->getId()
+                   && $element        === $parent->getChild(1))
+                    return $children[0] - -$children[1];
 
-                            return $acc($a() / $b);
-                        };
-                    }
-                }
+                return $children[0] - $children[1];
+              break;
 
-                $children[1]->accept($this, $acc, $eldnah);
+            case '#power':
+                return pow($children[0], $children[1]);
+              break;
 
-                break;
+            case '#modulo':
+                return $children[0] % $children[1];
+              break;
 
-            case '#fakegroup':
-            case '#group':
-                $children[0]->accept($this, $a, $eldnah);
+            case '#multiplication':
+                return $children[0] * $children[1];
+              break;
 
-                $acc = function () use ($a, $acc) {
-                    return $acc($a());
-                };
+            case '#division':
+                if(0 == $children[1])
+                    throw new \Hoa\Math\Exception\DivisionByZero(
+                        'Tried to divide %f by zero, impossible.',
+                        0, $children[0]);
 
-                break;
-
-            case '#variable':
-                $out = $this->getVariable($children[0]->getValueValue());
-
-                $acc = function () use ($out, $acc) {
-                    return $acc($out);
-                };
-
-                break;
+                return $children[0] / $children[1];
+              break;
 
             case 'token':
                 $value = $element->getValueValue();
-                $out   = null;
 
-                if ('constant' === $element->getValueToken()) {
-                    if (defined($value)) {
-                        $out = constant($value);
-                    } else {
-                        $out = $this->getConstant($value);
-                    }
-                } elseif ('id' === $element->getValueToken()) {
-                    return $value;
-                } else {
-                    $out = (float) $value;
+                if('constant' === $element->getValueToken()) {
+
+                    if(defined($value))
+                        return constant($value);
+
+                    return $this->getConstant($value);
                 }
 
-                $acc = function () use ($out, $acc) {
-                    return $acc($out);
-                };
+                if('id' === $element->getValueToken())
+                    return $value;
 
-                break;
-        }
-
-        if (null === $element->getParent()) {
-            return $acc();
+                return (float) $value;
         }
     }
 
     /**
      * Get functions.
      *
+     * @access  public
      * @return  \ArrayObject
      */
-    public function getFunctions()
-    {
-        return $this->_context->getFunctions();
+    public function getFunctions ( ) {
+
+        if(null === $this->_functions)
+            $this->initializeFunctions();
+
+        return $this->_functions;
     }
 
     /**
      * Get a function.
      *
+     * @access  public
      * @param   string  $name    Function name.
-     * @return  \Hoa\Consistency\Xcallable
-     * @throws  \Hoa\Math\Exception\UnknownFunction
+     * @return  \Hoa\Core\Consistency\Xcallable
+     * @throw   \Hoa\Math\Exception\UnknownFunction
      */
-    public function getFunction($name)
-    {
-        return $this->_context->getFunction($name);
+    public function getFunction ( $name ) {
+
+        if(null === $this->_functions)
+            $this->initializeFunctions();
+
+        if(false === $this->_functions->offsetExists($name))
+            throw new \Hoa\Math\Exception\UnknownFunction(
+                'Function %s does not exist.', 1, $name);
+
+        return $this->_functions[$name];
     }
 
     /**
      * Get constants.
      *
+     * @access  public
      * @return  \ArrayObject
      */
-    public function getConstants()
-    {
-        return $this->_context->getConstants();
+    public function getConstants ( ) {
+
+        if(null === $this->_constants)
+            $this->initializeConstants();
+
+        return $this->_constants;
     }
 
     /**
      * Get a constant.
      *
+     * @access  public
      * @param   string  $name    Constant name.
      * @return  mixed
-     * @throws  \Hoa\Math\Exception\UnknownFunction
+     * @throw   \Hoa\Math\Exception\UnknownFunction
      */
-    public function getConstant($name)
-    {
-        return $this->_context->getConstant($name);
+    public function getConstant ( $name ) {
+
+        if(null === $this->_constants)
+            $this->initializeConstants();
+
+        if(false === $this->_constants->offsetExists($name))
+            throw new \Hoa\Math\Exception\UnknownConstant(
+                'Constant %s does not exist', 2, $name);
+
+        return $this->_constants[$name];
     }
 
     /**
-     * Get variables.
+     * Initialize functions mapping.
      *
-     * @return \ArrayObject
+     * @access protected
+     * @return void
      */
-    public function getVariables()
-    {
-        return $this->_context->getVariables();
-    }
+    protected function initializeFunctions ( ) {
 
-    /**
-     * Get a variable.
-     *
-     * @param   string  $name    Variable name.
-     * @return  callable
-     * @throws  \Hoa\Math\Exception\UnknownVariable
-     */
-    public function getVariable($name)
-    {
-        return $this->_context->getVariable($name);
-    }
+        static $_functions = null;
 
-    protected function initializeContext()
-    {
-        if (null === $this->_context) {
-            $this->_context = new Math\Context();
+        if(null === $_functions) {
+
+            $average = function ( ) {
+
+                $arguments = func_get_args();
+
+                return array_sum($arguments) / count($arguments);
+            };
+
+            $_functions = new \ArrayObject(array(
+                'if'      => xcallable(function($condition, $than, $else) {
+                                return $condition ? $than : $else;
+                             }),
+                'lt'      => xcallable(function($left, $right) {
+                                return $left < $right;
+                             }),
+                'lte'     => xcallable(function($left, $right) {
+                                return $left <= $right;
+                             }),
+                'gt'      => xcallable(function($left, $right) {
+                                return $left > $right;
+                             }),
+                'gte'     => xcallable(function($left, $right) {
+                                return $left >= $right;
+                             }),
+                'eq'      => xcallable(function($left, $right) {
+                                return $left == $right;
+                             }),
+                'abs'     => xcallable('abs'),
+                'acos'    => xcallable(function ( $value ) {
+                                 return acos(deg2rad($value));
+                             }),
+                'asin'    => xcallable(function ( $value ) {
+                                 return asin(deg2rad($value));
+                             }),
+                'atan'    => xcallable(function ( $value ) {
+                                 return atan(deg2rad($value));
+                             }),
+                'average' => xcallable($average),
+                'avg'     => xcallable($average),
+                'ceil'    => xcallable('ceil'),
+                'cos'     => xcallable(function ( $value ) {
+                                 return cos(deg2rad($value));
+                             }),
+                'count'   => xcallable(function ( ) {
+                                 return count(func_get_args());
+                             }),
+                'deg2rad' => xcallable('deg2rad'),
+                'exp'     => xcallable('exp'),
+                'floor'   => xcallable('floor'),
+                'ln'      => xcallable('log'),
+                'log'     => xcallable(function ( $value, $base = 10 ) {
+                                 return log($value, $base);
+                             }),
+                'max'     => xcallable('max'),
+                'min'     => xcallable('min'),
+                'pow'     => xcallable('pow'),
+                'rad2deg' => xcallable('rad2deg'),
+                'sin'     => xcallable(function ( $value ) {
+                                 return sin(deg2rad($value));
+                             }),
+                'sqrt'    => xcallable('sqrt'),
+                'sum'     => xcallable(function ( ) {
+                                 return array_sum(func_get_args());
+                             }),
+                'tan'     => xcallable(function ( $value ) {
+                                 return tan(deg2rad($value));
+                             }),
+            ));
         }
+
+        $this->_functions = $_functions;
+
+        return;
+    }
+
+    /**
+     * Initialize constants mapping.
+     *
+     * @access protected
+     * @return void
+     */
+    protected function initializeConstants ( ) {
+
+        static $_constants = null;
+
+        if(null === $_constants)
+            $_constants = new \ArrayObject(array(
+                'PI'      => M_PI,
+                'PI_2'    => M_PI_2,
+                'PI_4'    => M_PI_4,
+                'E'       => M_E,
+                'SQRT_PI' => M_SQRTPI,
+                'SQRT_2'  => M_SQRT2,
+                'SQRT_3'  => M_SQRT3,
+                'LN_PI'   => M_LNPI,
+            ));
+
+        $this->_constants = $_constants;
 
         return;
     }
@@ -348,36 +364,41 @@ class Arithmetic implements Visitor\Visit
     /**
      * Add a function.
      *
+     * @access  public
      * @param   string  $name        Function name.
      * @param   mixed   $callable    Callable.
      * @return  void
      */
-    public function addFunction($name, $callable = null)
-    {
-        return $this->_context->addFunction($name, $callable);
+    public function addFunction ( $name, $callable = null ) {
+
+        if(null === $callable) {
+
+            if(false === function_exists($name))
+                throw new \Hoa\Math\UnknownFunction(
+                    'Function %s does not exist, cannot add it.', 3, $name);
+
+            $callable = $name;
+        }
+
+        $this->_functions[$name] = xcallable($callable);
+
+        return;
     }
 
     /**
      * Add a constant.
      *
+     * @access  public
      * @param   string  $name     Constant name.
      * @param   mixed   $value    Value.
      * @return  void
      */
-    public function addConstant($name, $value)
-    {
-        return $this->_context->addConstant($name, $value);
-    }
+    public function addConstant ( $name, $value ) {
 
-    /**
-     * Add a variable.
-     *
-     * @param   string    $name        Variable name.
-     * @param   callable  $callable    Callable.
-     * @return  void
-     */
-    public function addVariable($name, callable $callable)
-    {
-        return $this->_context->addVariable($name, $callable);
+        $this->_constants[$name] = $value;
+
+        return;
     }
+}
+
 }

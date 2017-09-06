@@ -8,7 +8,7 @@
  *
  * New BSD License
  *
- * Copyright © 2007-2017, Hoa community. All rights reserved.
+ * Copyright © 2007-2013, Ivan Enderlin. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -34,73 +34,107 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace Hoa\Math\Bin;
+namespace {
 
-use Hoa\Compiler;
-use Hoa\Console;
-use Hoa\File;
-use Hoa\Math;
+from('Hoa')
+
+/**
+ * \Hoa\File\Read
+ */
+-> import('File.Read')
+
+/**
+ * \Hoa\Compiler\Llk
+ */
+-> import('Compiler.Llk.~')
+
+/**
+ * \Hoa\Math\Visitor\Arithmetic
+ */
+-> import('Math.Visitor.Arithmetic')
+
+/**
+ * \Hoa\Compiler\Visitor\Dump
+ */
+-> import('Compiler.Visitor.Dump')
+
+/**
+ * \Hoa\Console\Readline
+ */
+-> import('Console.Readline.~')
+
+/**
+ * \Hoa\Console\Readline\Autocompleter\Word
+ */
+-> import('Console.Readline.Autocompleter.Word');
+
+}
+
+namespace Hoa\Math\Bin {
 
 /**
  * Class \Hoa\Math\Bin\Calc.
  *
  * A simple calculator.
  *
- * @copyright  Copyright © 2007-2017 Hoa community
+ * @author     Ivan Enderlin <ivan.enderlin@hoa-project.net>
+ * @copyright  Copyright © 2007-2013 Ivan Enderlin.
  * @license    New BSD License
  */
-class Calc extends Console\Dispatcher\Kit
-{
+
+class Calc extends \Hoa\Console\Dispatcher\Kit {
+
     /**
      * Options description.
      *
-     * @var array
+     * @var \Hoa\Math\Bin\Calc array
      */
-    protected $options = [
-        ['help', Console\GetOption::NO_ARGUMENT, 'h'],
-        ['help', Console\GetOption::NO_ARGUMENT, '?']
-    ];
+    protected $options = array(
+        array('help', \Hoa\Console\GetOption::NO_ARGUMENT, 'h'),
+        array('help', \Hoa\Console\GetOption::NO_ARGUMENT, '?')
+    );
 
 
 
     /**
      * The entry method.
      *
+     * @access  public
      * @return  int
      */
-    public function main()
-    {
-        while (false !== $c = $this->getOption($v)) {
-            switch ($c) {
-                case 'h':
-                case '?':
-                    return $this->usage();
+    public function main ( ) {
 
-                case '__ambiguous':
-                    $this->resolveOptionAmbiguity($v);
+        while(false !== $c = $this->getOption($v)) switch($c) {
 
-                    break;
-            }
+            case 'h':
+            case '?':
+                return $this->usage();
+              break;
+
+            case '__ambiguous':
+                $this->resolveOptionAmbiguity($v);
+              break;
         }
 
         $this->parser->listInputs($expression);
 
-        $compiler = Compiler\Llk::load(
-            new File\Read('hoa://Library/Math/Arithmetic.pp')
+        $compiler = \Hoa\Compiler\Llk::load(
+            new \Hoa\File\Read('hoa://Library/Math/Arithmetic.pp')
         );
-        $visitor  = new Math\Visitor\Arithmetic();
-        $dump     = new Compiler\Visitor\Dump();
+        $visitor  = new \Hoa\Math\Visitor\Arithmetic();
+        $dump     = new \Hoa\Compiler\Visitor\Dump();
 
-        if (null !== $expression) {
+        if(null !== $expression) {
+
             $ast = $compiler->parse($expression);
             echo $expression . ' = ' . $visitor->visit($ast), "\n";
 
             return;
         }
 
-        $readline   = new Console\Readline();
+        $readline   = new \Hoa\Console\Readline();
         $readline->setAutocompleter(
-            new Console\Readline\Autocompleter\Word(
+            new \Hoa\Console\Readline\Autocompleter\Word(
                 array_merge(
                     array_keys($visitor->getConstants()->getArrayCopy()),
                     array_keys($visitor->getFunctions()->getArrayCopy())
@@ -111,84 +145,71 @@ class Calc extends Console\Dispatcher\Kit
         $expression = 'h';
 
         do {
-            switch ($expression) {
+
+            switch($expression) {
+
                 case 'h':
                 case 'help':
-                    echo
-                        'Usage:', "\n",
-                        '    h[elp]       to print this help;', "\n",
-                        '    c[onstants]  to print available constants;', "\n",
-                        '    f[unctions]  to print available functions;', "\n",
-                        '    e[xpression] to print the current expression;', "\n",
-                        '    d[ump]       to dump the tree of the expression;', "\n",
-                        '    q[uit]       to quit.', "\n";
-
-                    break;
+                    echo 'Usage:', "\n",
+                         '    h[elp]       to print this help;', "\n",
+                         '    c[onstants]  to print available constants;', "\n",
+                         '    f[unctions]  to print available functions;', "\n",
+                         '    e[xpression] to print the current expression;', "\n",
+                         '    d[ump]       to dump the tree of the expression;', "\n",
+                         '    q[uit]       to quit.', "\n";
+                  break;
 
                 case 'c':
                 case 'constants':
-                    echo
-                        implode(
-                            ', ',
-                            array_keys(
-                                $visitor->getConstants()->getArrayCopy()
-                            )
-                        ),
-                        "\n";
-
-                    break;
+                    echo implode(', ', array_keys(
+                        $visitor->getConstants()->getArrayCopy()
+                    )), "\n";
+                  break;
 
                 case 'f':
                 case 'functions':
-                    echo
-                        implode(
-                            ', ',
-                            array_keys(
-                                $visitor->getFunctions()->getArrayCopy()
-                            )
-                        ),
-                        "\n";
-
-                    break;
+                    echo implode(', ', array_keys(
+                        $visitor->getFunctions()->getArrayCopy()
+                    )), "\n";
+                  break;
 
                 case 'e':
                 case 'expression':
                     echo $handle, "\n";
-
-                    break;
+                  break;
 
                 case 'd':
                 case 'dump':
-                    if (null === $handle) {
+                    if(null === $handle)
                         echo 'Type a valid expression before (“> 39 + 3”).', "\n";
-                    } else {
+                    else
                         echo $dump->visit($compiler->parse($handle)), "\n";
-                    }
-
-                    break;
+                  break;
 
                 case 'q':
                 case 'quit':
-                    break 2;
+                  break 2;
 
                 default:
-                    if (null === $expression) {
+                    if(null === $expression)
                         break;
-                    }
 
                     try {
+
                         echo $visitor->visit($compiler->parse($expression)), "\n";
-                    } catch (Compiler\Exception $e) {
-                        echo $e->getMessage(), "\n";
+                    }
+                    catch ( \Hoa\Compiler\Exception $e ) {
+
+                        echo $e->getFormattedMessage(), "\n";
 
                         break;
                     }
 
                     $handle = $expression;
-
-                    break;
+                  break;
             }
-        } while (false !== $expression = $readline->readLine('> '));
+
+        } while(false !== $expression = $readline->readLine('> '));
 
         return;
     }
@@ -196,19 +217,21 @@ class Calc extends Console\Dispatcher\Kit
     /**
      * The command usage.
      *
+     * @access  public
      * @return  int
      */
-    public function usage()
-    {
-        echo
-            'Usage   : math:calc <options> [expression]', "\n",
-            'Options :', "\n",
-            $this->makeUsageOptionsList([
-                'help' => 'This help.'
-            ]), "\n";
+    public function usage ( ) {
+
+        echo 'Usage   : math:calc <options> [expression]', "\n",
+             'Options :', "\n",
+             $this->makeUsageOptionsList(array(
+                 'help' => 'This help.'
+             )), "\n";
 
         return;
     }
+}
+
 }
 
 __halt_compiler();

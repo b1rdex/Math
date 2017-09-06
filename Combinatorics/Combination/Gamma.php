@@ -8,7 +8,7 @@
  *
  * New BSD License
  *
- * Copyright © 2007-2017, Hoa community. All rights reserved.
+ * Copyright © 2007-2013, Ivan Enderlin. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -34,9 +34,18 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace Hoa\Math\Combinatorics\Combination;
+namespace {
 
-use Hoa\Iterator;
+from('Hoa')
+
+/**
+ * \Hoa\Iterator
+ */
+-> import('Iterator.~');
+
+}
+
+namespace Hoa\Math\Combinatorics\Combination {
 
 /**
  * Class \Hoa\Math\Combinatorics\Combination\Gamma.
@@ -47,57 +56,59 @@ use Hoa\Iterator;
  * This class is identical to \Hoa\Math\Combinatorics\Combination::Gamma with a
  * “yield” keyword.
  *
- * @copyright  Copyright © 2007-2017 Hoa community
+ * @author     Ivan Enderlin <ivan.enderlin@hoa-project.net>
+ * @copyright  Copyright © 2007-2013 Ivan Enderlin.
  * @license    New BSD License
  */
-class Gamma implements Iterator
-{
+
+class Gamma implements \Hoa\Iterator {
+
     /**
      * n.
      *
-     * @var int
+     * @var \Hoa\Math\Combinatorics\Combination\Gamma int
      */
     protected $_n       = 0;
 
     /**
      * k.
      *
-     * @var int
+     * @var \Hoa\Math\Combinatorics\Combination\Gamma int
      */
     protected $_k       = 0;
 
     /**
      * For iterator.
      *
-     * @var int
+     * @var \Hoa\Math\Combinatorics\Combination\Gamma int
      */
     protected $_current = null;
 
     /**
      * For iterator.
      *
-     * @var int
+     * @var \Hoa\Math\Combinatorics\Combination\Gamma int
      */
     protected $_key     = -1;
 
     /**
      * For iterator.
      *
-     * @var array
+     * @var \Hoa\Math\Combinatorics\Combination\Gamma array
      */
     protected $_tmp     = null;
 
     /**
      * For iterator.
      *
-     * @var int
+     * @var \Hoa\Math\Combinatorics\Combination\Gamma int
      */
     protected $_i       = 0;
 
     /**
      * For iterator.
      *
-     * @var int
+     * @var \Hoa\Math\Combinatorics\Combination\Gamma int
      */
     protected $_o       = 0;
 
@@ -105,7 +116,7 @@ class Gamma implements Iterator
      * For iterator.
      *
      *
-     * @var bool
+     * @var \Hoa\Math\Combinatorics\Combination\Gamma bool
      */
     protected $_last    = false;
 
@@ -114,11 +125,13 @@ class Gamma implements Iterator
     /**
      * Constructor.
      *
+     * @access  public
      * @param   int  $n    n.
      * @param   int  $k    k.
+     * @return  void
      */
-    public function __construct($n, $k)
-    {
+    public function __construct ( $n, $k ) {
+
         $this->_n = $n;
         $this->_k = $k;
 
@@ -128,45 +141,49 @@ class Gamma implements Iterator
     /**
      * Get current γ.
      *
+     * @access  public
      * @return  array
      */
-    public function current()
-    {
+    public function current ( ) {
+
         return $this->_current;
     }
 
     /**
      * Get current α.
      *
+     * @access  public
      * @return  int
      */
-    public function key()
-    {
+    public function key ( ) {
+
         return $this->_key;
     }
 
     /**
      * Compute γ_{α + 1}.
      *
+     * @access  public
      * @return  void
      */
-    public function next()
-    {
+    public function next ( ) {
+
         return;
     }
 
     /**
      * Rewind iterator.
      *
+     * @access  public
      * @return  void
      */
-    public function rewind()
-    {
-        $this->_current = [];
+    public function rewind ( ) {
+
+        $this->_current = array();
         $this->_tmp     = null;
         $this->_i       = 0;
         $this->_o       = 0 === $this->_n
-                              ? [0]
+                              ? array(0)
                               : array_fill(0, $this->_n, 0);
         $this->_o[0]    = $this->_k;
         $this->_last    = false;
@@ -177,19 +194,19 @@ class Gamma implements Iterator
     /**
      * Compute γ_α.
      *
+     * @access  public
      * @return  bool
      */
-    public function valid()
-    {
-        if (true === $this->_last) {
-            return false;
-        }
+    public function valid ( ) {
 
-        if (0 === $this->_n) {
+        if(true === $this->_last)
             return false;
-        }
 
-        if ($this->_k == $this->_o[$this->_i = $this->_n - 1]) {
+        if(0 === $this->_n)
+            return false;
+
+        if($this->_k == $this->_o[$this->_i = $this->_n - 1]) {
+
             $this->_last    = true;
             $this->_current = $this->_o;
             ++$this->_key;
@@ -203,13 +220,13 @@ class Gamma implements Iterator
         $this->_tmp          = $this->_o[$this->_i];
         $this->_o[$this->_i] = 0;
 
-        while ($this->_o[$this->_i] == 0) {
-            --$this->_i;
-        }
+        while($this->_o[$this->_i] == 0) --$this->_i;
 
         --$this->_o[$this->_i];
         $this->_o[$this->_i + 1] = $this->_tmp + 1;
 
         return true;
     }
+}
+
 }

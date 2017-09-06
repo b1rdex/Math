@@ -8,7 +8,7 @@
  *
  * New BSD License
  *
- * Copyright © 2007-2017, Hoa community. All rights reserved.
+ * Copyright © 2007-2013, Ivan Enderlin. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -34,24 +34,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace Hoa\Math\Exception;
-
-use Hoa\Consistency;
-use Hoa\Exception as HoaException;
+namespace Hoa\Math\Exception {
 
 /**
  * Class \Hoa\Math\Exception.
  *
- * Extending the \Hoa\Exception\Exception class.
- *
- * @copyright  Copyright © 2007-2017 Hoa community
+ * @author     Stéphane Py <py.stephane1@gmail.com>
+ * @author     Sébastien Houze <s@verylastroom.com>
+ * @copyright  Copyright © 2007-2013 Stéphane Py, Sébastien Houze.
  * @license    New BSD License
  */
-class Exception extends HoaException
-{
-}
 
-/**
- * Flex entity.
- */
-Consistency::flexEntity('Hoa\Math\Exception\Exception');
+class Exception extends \Hoa\Core\Exception { }
+
+}
